@@ -1,58 +1,104 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import cloudflareLogo from './assets/Cloudflare_Logo.svg'
-import './App.css'
+import { AuthGuard } from './components/AuthGuard';
+import {
+  useShoppingList,
+  useCompletedItems,
+  useAddItem,
+  useToggleItem,
+  useDeleteItem
+} from './hooks/use-shopping-list';
+import { ShoppingBag } from 'lucide-react';
 
-function App() {
-  const [count, setCount] = useState(0)
-  const [name, setName] = useState('unknown')
+import { Header } from './components/Header';
+import { ItemCard } from './components/ItemCard';
+import { AddItemForm } from './components/AddItemForm';
+import { SkeletonList } from './components/SkeletonList';
+
+function ShoppingList() {
+  const { data: items, isLoading, isError, isFetching } = useShoppingList();
+  const { data: completedItems = [] } = useCompletedItems();
+
+  const addItem = useAddItem();
+  const toggleItem = useToggleItem();
+  const deleteItem = useDeleteItem();
+
+  if (isLoading) {
+    return <SkeletonList />;
+  }
+
+  if (isError) {
+    return (
+      <div className="flex h-[100dvh] items-center justify-center bg-slate-50">
+        <div className="p-6 text-center text-red-500 bg-red-50 rounded-2xl max-w-xs">
+          <p className="font-semibold">Ops! Ocorreu um erro.</p>
+          <p className="text-sm mt-1 opacity-80">Não foi possível carregar a lista offline.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const pendingItems = items?.filter((i) => !i.checked) || [];
 
   return (
-    <>
-      <div>
-        <a href='https://vite.dev' target='_blank'>
-          <img src={viteLogo} className='logo' alt='Vite logo' />
-        </a>
-        <a href='https://react.dev' target='_blank'>
-          <img src={reactLogo} className='logo react' alt='React logo' />
-        </a>
-        <a href='https://workers.cloudflare.com/' target='_blank'>
-          <img src={cloudflareLogo} className='logo cloudflare' alt='Cloudflare logo' />
-        </a>
-      </div>
-      <h1>Vite + React + Cloudflare</h1>
-      <div className='card'>
-        <button
-          onClick={() => setCount((count) => count + 1)}
-          aria-label='increment'
-        >
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <div className='card'>
-        <button
-          onClick={() => {
-            fetch('/api/')
-              .then((res) => res.json() as Promise<{ name: string }>)
-              .then((data) => setName(data.name))
-          }}
-          aria-label='get name'
-        >
-          Name from API is: {name}
-        </button>
-        <p>
-          Edit <code>worker/index.ts</code> to change the name
-        </p>
-      </div>
-      <p className='read-the-docs'>
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div className="max-w-md mx-auto flex flex-col min-h-[100dvh] bg-slate-50 relative selection:bg-blue-200">
+
+      <Header pendingCount={pendingItems.length} isFetching={isFetching} />
+
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-32">
+        {/* Seção: Itens Pendentes */}
+        <div className="space-y-3">
+          {pendingItems.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              onToggle={toggleItem.mutate}
+              onDelete={deleteItem.mutate}
+            />
+          ))}
+        </div>
+
+        {/* Estado Vazio */}
+        {pendingItems.length === 0 && completedItems.length === 0 && (
+          <div className="text-center flex flex-col items-center justify-center mt-20 px-6 opacity-60">
+            <ShoppingBag className="w-16 h-16 text-slate-300 mb-4" />
+            <p className="text-slate-500 font-medium text-lg">Sua lista está vazia</p>
+            <p className="text-slate-400 text-sm mt-1">Adicione itens abaixo para começar.</p>
+          </div>
+        )}
+
+        {/* Seção: Já Comprados */}
+        {completedItems.length > 0 && (
+          <div className="mt-10 mb-4">
+            <h2 className="text-sm font-bold text-slate-500 tracking-tight mb-3 px-2 flex items-center gap-2">
+              Já Comprados
+              <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs">
+                {completedItems.length}
+              </span>
+            </h2>
+            <div className="space-y-3">
+              {completedItems.map((item) => (
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  isCompleted
+                  onToggle={toggleItem.mutate}
+                  onDelete={deleteItem.mutate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      <AddItemForm onAdd={addItem.mutate} />
+
+    </div>
+  );
 }
 
-export default App
+export default function App() {
+  return (
+    <AuthGuard>
+      <ShoppingList />
+    </AuthGuard>
+  );
+}

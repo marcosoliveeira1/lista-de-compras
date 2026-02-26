@@ -39,11 +39,11 @@ function ShoppingList() {
   const pendingItems = items?.filter((i) => !i.checked) || [];
 
   return (
-    <div className="max-w-md mx-auto flex flex-col min-h-[100dvh] bg-slate-50 relative selection:bg-blue-200">
+    <div className="max-w-md mx-auto flex flex-col h-[100dvh] overflow-hidden bg-slate-50 relative selection:bg-blue-200">
 
       <Header pendingCount={pendingItems.length} isFetching={isFetching} />
 
-      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-32">
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-6">
         {/* Seção: Itens Pendentes */}
         <div className="space-y-3">
           {pendingItems.map((item) => (

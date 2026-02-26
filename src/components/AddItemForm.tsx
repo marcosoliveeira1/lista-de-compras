@@ -16,10 +16,10 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pointer-events-none pb-safe">
+    <div className="p-4 bg-slate-50 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-200/50">
       <form
         onSubmit={handleSubmit}
-        className="max-w-md mx-auto bg-white p-2 rounded-full shadow-lg border border-slate-200 flex gap-2 pointer-events-auto items-center"
+        className="w-full bg-white p-2 rounded-full shadow-sm border border-slate-200 flex gap-2 items-center"
       >
         <input
           type="text"

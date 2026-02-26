@@ -1,8 +1,8 @@
 export function SkeletonList() {
-  const widths = ['w-3/4', 'w-1/2', 'w-2/3', 'w-4/5', 'w-1/2'];
+  const widths =['w-3/4', 'w-1/2', 'w-2/3', 'w-4/5', 'w-1/2'];
 
   return (
-    <div className="max-w-md mx-auto flex flex-col min-h-[100dvh] bg-slate-50 relative pointer-events-none">
+    <div className="max-w-md mx-auto flex flex-col h-[100dvh] overflow-hidden bg-slate-50 relative pointer-events-none">
 
       {/* Header Skeleton */}
       <header className="sticky top-0 z-10 px-6 py-5 border-b border-slate-200/50 flex justify-between items-center bg-slate-50">
@@ -21,7 +21,7 @@ export function SkeletonList() {
       </header>
 
       {/* Main content Skeleton */}
-      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-32 space-y-3">
+      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-6 space-y-3">
         {widths.map((width, index) => (
           <div
             key={index}
@@ -40,8 +40,8 @@ export function SkeletonList() {
       </main>
 
       {/* AddItemForm Skeleton */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent pb-safe">
-        <div className="max-w-md mx-auto bg-white p-2 rounded-full shadow-lg border border-slate-200 flex gap-2 items-center">
+      <div className="p-4 bg-slate-50 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-slate-200/50">
+        <div className="w-full bg-white p-2 rounded-full shadow-sm border border-slate-200 flex gap-2 items-center">
           {/* Input de texto */}
           <div className="flex-1 h-10 mx-4 bg-slate-100 rounded-lg animate-pulse" />
           {/* Botão de adicionar */}

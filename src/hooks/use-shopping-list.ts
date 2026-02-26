@@ -5,35 +5,23 @@ import type { ShoppingItem, ShopListResponse } from '../types/index';
 
 const QUERY_KEY = ['shopping-list'];
 const COMPLETED_KEY = ['completed-list'];
-const LOCAL_COMPLETED_STORAGE_KEY = 'shoplist_completed_items';
 
-const getLocalCompleted = (): ShoppingItem[] => {
-  try {
-    const data = localStorage.getItem(LOCAL_COMPLETED_STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-};
-
-const setLocalCompleted = (items: ShoppingItem[]) => {
-  localStorage.setItem(LOCAL_COMPLETED_STORAGE_KEY, JSON.stringify(items));
-};
+const TWENTY_FOUR_HOURS = 1000 * 60 * 60 * 24;
 
 export const useShoppingList = () => {
   return useQuery({
     queryKey: QUERY_KEY,
     queryFn: () => request<ShopListResponse>('GET', 'shoplist'),
+    staleTime: 0,
   });
 };
 
 export const useCompletedItems = () => {
   return useQuery({
     queryKey: COMPLETED_KEY,
-    queryFn: getLocalCompleted,
-    initialData: getLocalCompleted,
-    staleTime: Infinity,
-    gcTime: Infinity,
+    queryFn: async () => [] as ShoppingItem[],
+    staleTime: TWENTY_FOUR_HOURS,
+    gcTime: TWENTY_FOUR_HOURS,
   });
 };
 
@@ -87,7 +75,7 @@ export const useToggleItem = () => {
       await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
 
       const previousPending = queryClient.getQueryData<ShoppingItem[]>(QUERY_KEY) || [];
-      const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY) || getLocalCompleted();
+      const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY) || [];
 
       if (updatedItem.checked) {
         const newPending = previousPending.filter((i) => i.id !== updatedItem.id);
@@ -95,24 +83,19 @@ export const useToggleItem = () => {
 
         queryClient.setQueryData(QUERY_KEY, newPending);
         queryClient.setQueryData(COMPLETED_KEY, newCompleted);
-        setLocalCompleted(newCompleted);
       } else {
         const newCompleted = previousCompleted.filter((i) => i.id !== updatedItem.id);
         const newPending = [...previousPending, updatedItem];
 
         queryClient.setQueryData(COMPLETED_KEY, newCompleted);
         queryClient.setQueryData(QUERY_KEY, newPending);
-        setLocalCompleted(newCompleted);
       }
 
       return { previousPending, previousCompleted };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousPending) queryClient.setQueryData(QUERY_KEY, context.previousPending);
-      if (context?.previousCompleted) {
-        queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
-        setLocalCompleted(context.previousCompleted);
-      }
+      if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });
@@ -130,23 +113,16 @@ export const useDeleteItem = () => {
       await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
 
       const previousPending = queryClient.getQueryData<ShoppingItem[]>(QUERY_KEY) || [];
-      const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY) || getLocalCompleted();
+      const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY) || [];
 
       queryClient.setQueryData<ShoppingItem[]>(QUERY_KEY, (old) => old?.filter((i) => i.id !== id));
-      queryClient.setQueryData<ShoppingItem[]>(COMPLETED_KEY, (old) => {
-        const newCompleted = old?.filter((i) => i.id !== id) || [];
-        setLocalCompleted(newCompleted);
-        return newCompleted;
-      });
+      queryClient.setQueryData<ShoppingItem[]>(COMPLETED_KEY, (old) => old?.filter((i) => i.id !== id));
 
       return { previousPending, previousCompleted };
     },
     onError: (_err, _id, context) => {
       if (context?.previousPending) queryClient.setQueryData(QUERY_KEY, context.previousPending);
-      if (context?.previousCompleted) {
-        queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
-        setLocalCompleted(context.previousCompleted);
-      }
+      if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEY });

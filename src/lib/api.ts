@@ -12,8 +12,14 @@ export const api = axios.create({
 
 export const AUTH_KEY = 'compras_app_auth_key';
 
+export const authStorage = {
+  getToken: () => localStorage.getItem(AUTH_KEY),
+  setToken: (token: string) => localStorage.setItem(AUTH_KEY, token),
+  removeToken: () => localStorage.removeItem(AUTH_KEY),
+};
+
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem(AUTH_KEY);
+  const token = authStorage.getToken();
 
   if (token) {
     config.headers['x-api-token'] = token;

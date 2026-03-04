@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
 import { request } from '../lib/api';
 import type { ShoppingItem, ShopListResponse } from '../types/index';
+import { useHaptics } from './use-haptics';
+import { toast } from 'sonner';
 
 const QUERY_KEY = ['shopping-list'];
 const COMPLETED_KEY = ['completed-list'];
@@ -25,8 +27,27 @@ export const useCompletedItems = () => {
   });
 };
 
+export const useReorderItems = () => {
+  const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
+
+  return useMutation({
+    mutationFn: (ids: string[]) =>
+      request('PUT', 'shoplist/reorder', { ids }),
+    onSuccess: () => {
+      trigger('success');
+    },
+    onError: () => {
+      trigger('error');
+      toast.error('Falha ao salvar nova ordem no servidor.');
+      queryClient.invalidateQueries({ queryKey: QUERY_KEY });
+    }
+  });
+};
+
 export const useAddItem = () => {
   const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
 
   return useMutation({
     mutationFn: (label: string) => {
@@ -38,6 +59,7 @@ export const useAddItem = () => {
       return request('POST', 'shoplist', newItem);
     },
     onMutate: async (newLabel) => {
+      trigger('success');
       await queryClient.cancelQueries({ queryKey: QUERY_KEY });
       const previousList = queryClient.getQueryData<ShoppingItem[]>(QUERY_KEY);
 
@@ -47,12 +69,14 @@ export const useAddItem = () => {
           label: newLabel,
           checked: false,
         };
-        return old ? [...old, item] : [item];
+        return old ? [item, ...old] : [item];
       });
 
       return { previousList };
     },
     onError: (_err, _newLabel, context) => {
+      trigger('error');
+      toast.error('Erro ao adicionar item');
       if (context?.previousList) {
         queryClient.setQueryData(QUERY_KEY, context.previousList);
       }
@@ -65,12 +89,14 @@ export const useAddItem = () => {
 
 export const useToggleItem = () => {
   const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
 
   return useMutation({
     mutationFn: (updatedItem: ShoppingItem) =>
       request('PUT', `shoplist/${updatedItem.id}`, updatedItem),
 
     onMutate: async (updatedItem) => {
+      trigger('nudge');
       await queryClient.cancelQueries({ queryKey: QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
 
@@ -85,7 +111,7 @@ export const useToggleItem = () => {
         queryClient.setQueryData(COMPLETED_KEY, newCompleted);
       } else {
         const newCompleted = previousCompleted.filter((i) => i.id !== updatedItem.id);
-        const newPending = [...previousPending, updatedItem];
+        const newPending = [updatedItem, ...previousPending];
 
         queryClient.setQueryData(COMPLETED_KEY, newCompleted);
         queryClient.setQueryData(QUERY_KEY, newPending);
@@ -94,6 +120,8 @@ export const useToggleItem = () => {
       return { previousPending, previousCompleted };
     },
     onError: (_err, _variables, context) => {
+      trigger('error');
+      toast.error('Erro ao atualizar item');
       if (context?.previousPending) queryClient.setQueryData(QUERY_KEY, context.previousPending);
       if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },
@@ -105,10 +133,12 @@ export const useToggleItem = () => {
 
 export const useDeleteItem = () => {
   const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
 
   return useMutation({
     mutationFn: (id: string) => request('DELETE', `shoplist/${id}`),
     onMutate: async (id) => {
+      trigger('nudge');
       await queryClient.cancelQueries({ queryKey: QUERY_KEY });
       await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
 
@@ -121,6 +151,7 @@ export const useDeleteItem = () => {
       return { previousPending, previousCompleted };
     },
     onError: (_err, _id, context) => {
+      trigger('error');
       if (context?.previousPending) queryClient.setQueryData(QUERY_KEY, context.previousPending);
       if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },

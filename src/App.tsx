@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AuthGuard } from './components/AuthGuard';
 import {
   useShoppingList,
@@ -14,6 +15,7 @@ import { AddItemForm } from './components/AddItemForm';
 import { SkeletonList } from './components/SkeletonList';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHaptics } from './hooks/use-haptics';
+import { getStoredShopListId, storeShopListId, type ShopListId } from './config/shoplists';
 
 import {
   DndContext,
@@ -32,15 +34,21 @@ import {
 } from '@dnd-kit/sortable';
 
 function ShoppingList() {
+  const [selectedShopListId, setSelectedShopListId] = useState<ShopListId>(getStoredShopListId);
   const queryClient = useQueryClient();
   const { trigger } = useHaptics();
-  const { data: items = [], isLoading, isError, isFetching } = useShoppingList();
+  const { data: items = [], isLoading, isError, isFetching } = useShoppingList(selectedShopListId);
   const { data: completedItems = [] } = useCompletedItems();
 
-  const addItem = useAddItem();
-  const toggleItem = useToggleItem();
-  const deleteItem = useDeleteItem();
-  const reorderItems = useReorderItems();
+  const addItem = useAddItem(selectedShopListId);
+  const toggleItem = useToggleItem(selectedShopListId);
+  const deleteItem = useDeleteItem(selectedShopListId);
+  const reorderItems = useReorderItems(selectedShopListId);
+
+  const handleShopListChange = (id: ShopListId) => {
+    storeShopListId(id);
+    setSelectedShopListId(id);
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -60,7 +68,7 @@ function ShoppingList() {
 
       const newList = arrayMove(items, oldIndex, newIndex);
 
-      queryClient.setQueryData(['shopping-list'], newList);
+      queryClient.setQueryData(['shopping-list', selectedShopListId], newList);
 
       const idsOrder = newList.map(item => item.id);
       reorderItems.mutate(idsOrder);
@@ -83,7 +91,7 @@ function ShoppingList() {
 
   return (
     <div className="max-w-md mx-auto flex flex-col h-[100dvh] overflow-hidden bg-slate-50 relative">
-      <Header pendingCount={items.length} isFetching={isFetching} />
+      <Header selectedShopListId={selectedShopListId} onShopListChange={handleShopListChange} pendingCount={items.length} isFetching={isFetching} />
 
       <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-6">
         <DndContext

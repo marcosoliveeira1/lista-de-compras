@@ -41,11 +41,12 @@ api.interceptors.response.use(
 export const request = async <T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
-  data?: any
+  data?: any,
+  extraParams?: Record<string, string>
 ): Promise<T> => {
   return api.request({
     method,
-    params: { path },
+    params: { path, ...extraParams },
     data,
   }).then(res => res.data);
 };

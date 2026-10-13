@@ -7,6 +7,8 @@ export type ShopListId = typeof SHOP_LISTS[number]['id'];
 
 export const DEFAULT_SHOP_LIST_ID: ShopListId = SHOP_LISTS[0].id;
 
+export const PRODUCTS_SHOP_LIST_ID: ShopListId = 'vw6ce87aydosur28';
+
 const STORAGE_KEY = 'compras_app_selected_shoplist';
 
 export function getStoredShopListId(): ShopListId {

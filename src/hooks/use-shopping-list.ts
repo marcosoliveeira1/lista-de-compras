@@ -53,15 +53,16 @@ export const useAddItem = (shoplistId: ShopListId) => {
   const queryKey = getQueryKey(shoplistId);
 
   return useMutation({
-    mutationFn: (label: string) => {
+    mutationFn: ({ label, maxValue }: { label: string; maxValue?: number }) => {
       const newItem: ShoppingItem = {
         id: uuidv4(),
         label,
-        checked: false
+        checked: false,
+        ...(maxValue !== undefined ? { maxValue } : {}),
       };
       return request('POST', 'shoplist', newItem, { shoplistId });
     },
-    onMutate: async (newLabel) => {
+    onMutate: async ({ label, maxValue }) => {
       trigger('success');
       await queryClient.cancelQueries({ queryKey });
       const previousList = queryClient.getQueryData<ShoppingItem[]>(queryKey);
@@ -69,15 +70,16 @@ export const useAddItem = (shoplistId: ShopListId) => {
       queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => {
         const item: ShoppingItem = {
           id: uuidv4(),
-          label: newLabel,
+          label,
           checked: false,
+          ...(maxValue !== undefined ? { maxValue } : {}),
         };
         return old ? [item, ...old] : [item];
       });
 
       return { previousList };
     },
-    onError: (_err, _newLabel, context) => {
+    onError: (_err, _newItem, context) => {
       trigger('error');
       toast.error('Erro ao adicionar item');
       if (context?.previousList) {

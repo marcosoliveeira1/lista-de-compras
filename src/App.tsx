@@ -15,7 +15,7 @@ import { AddItemForm } from './components/AddItemForm';
 import { SkeletonList } from './components/SkeletonList';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHaptics } from './hooks/use-haptics';
-import { getStoredShopListId, storeShopListId, type ShopListId } from './config/shoplists';
+import { getStoredShopListId, storeShopListId, PRODUCTS_SHOP_LIST_ID, type ShopListId } from './config/shoplists';
 
 import {
   DndContext,
@@ -143,7 +143,10 @@ function ShoppingList() {
         )}
       </main>
 
-      <AddItemForm onAdd={addItem.mutate} />
+      <AddItemForm
+        onAdd={(label, maxValue) => addItem.mutate({ label, maxValue })}
+        showMaxValue={selectedShopListId === PRODUCTS_SHOP_LIST_ID}
+      />
     </div>
 
 

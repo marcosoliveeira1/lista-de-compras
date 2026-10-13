@@ -2,17 +2,24 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 
 interface AddItemFormProps {
-  onAdd: (label: string) => void;
+  onAdd: (label: string, maxValue?: number) => void;
+  showMaxValue?: boolean;
 }
 
-export function AddItemForm({ onAdd }: AddItemFormProps) {
+export function AddItemForm({ onAdd, showMaxValue }: AddItemFormProps) {
   const [label, setLabel] = useState('');
+  const [maxValue, setMaxValue] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!label.trim()) return;
-    onAdd(label.trim());
+
+    const parsed = parseFloat(maxValue.replace(',', '.'));
+    const max = showMaxValue && Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+
+    onAdd(label.trim(), max);
     setLabel('');
+    setMaxValue('');
   };
 
   return (
@@ -26,9 +33,24 @@ export function AddItemForm({ onAdd }: AddItemFormProps) {
           value={label}
           onChange={(e) => setLabel(e.target.value)}
           placeholder="Adicionar novo item..."
-          className="flex-1 px-4 py-2 outline-none bg-transparent text-slate-700 placeholder:text-slate-400 text-lg"
+          className="flex-1 min-w-0 px-4 py-2 outline-none bg-transparent text-slate-700 placeholder:text-slate-400 text-lg"
           autoComplete="off"
         />
+        {showMaxValue && (
+          <div className="flex items-center gap-1 flex-shrink-0 text-slate-700">
+            <span className="text-slate-400 text-lg">R$</span>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={maxValue}
+              onChange={(e) => setMaxValue(e.target.value)}
+              placeholder="máx"
+              className="w-16 px-1 py-2 outline-none bg-transparent text-slate-700 placeholder:text-slate-400 text-lg text-right"
+              autoComplete="off"
+              aria-label="Valor máximo"
+            />
+          </div>
+        )}
         <button
           type="submit"
           disabled={!label.trim()}

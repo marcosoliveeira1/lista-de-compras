@@ -45,14 +45,26 @@ export function ItemCard({ item, isCompleted, onToggle, onDelete }: ItemCardProp
           checked={item.checked}
           onCheckedChange={(checked) => onToggle({ ...item, checked: checked as boolean })}
         />
-        <span
-          className={cn(
-            "text-lg font-medium transition-all duration-300",
-            item.checked ? "line-through text-slate-400" : "text-slate-700"
+        <div className="flex flex-col min-w-0">
+          <span
+            className={cn(
+              "text-lg font-medium transition-all duration-300 truncate",
+              item.checked ? "line-through text-slate-400" : "text-slate-700"
+            )}
+          >
+            {item.label}
+          </span>
+          {item.maxValue !== undefined && (
+            <span
+              className={cn(
+                "text-sm font-medium transition-all duration-300",
+                item.checked ? "text-slate-400" : "text-emerald-600"
+              )}
+            >
+              máx {item.maxValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+            </span>
           )}
-        >
-          {item.label}
-        </span>
+        </div>
       </div>
 
 

@@ -19,4 +19,16 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+  .animate-priority-fill {
+    animation: priority-fill linear forwards;
+  }
+}
+
+@keyframes priority-fill {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }

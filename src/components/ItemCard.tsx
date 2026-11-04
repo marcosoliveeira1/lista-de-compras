@@ -1,10 +1,11 @@
 import { Checkbox } from './ui/checkbox';
 import type { ShoppingItem } from '../types';
-import { Trash2, GripVertical, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Trash2, GripVertical } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { nextPriority, type Priority } from '../lib/sort';
+import type { Priority } from '../lib/sort';
+import { PriorityButton } from './PriorityButton';
 
 interface ItemCardProps {
   item: ShoppingItem;
@@ -27,9 +28,6 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
     id: item.id,
     disabled: isCompleted || dragDisabled
   });
-
-  const priority = item.priority ?? 0;
-  const PriorityIcon = priority === 1 ? ArrowUp : priority === -1 ? ArrowDown : Minus;
 
   const style = {
     transform: CSS.Translate.toString(transform),
@@ -76,21 +74,10 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
 
       <div className="flex items-center gap-1">
         {!isCompleted && onPriorityChange && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onPriorityChange(item.id, nextPriority(priority));
-            }}
-            className={cn(
-              "p-2 rounded-full transition-all active:scale-95 cursor-pointer",
-              priority === 1 && "text-orange-500 bg-orange-50",
-              priority === -1 && "text-sky-600 bg-sky-50",
-              priority === 0 && "text-slate-300 hover:text-slate-400"
-            )}
-            aria-label={priority === 1 ? 'Prioritário' : priority === -1 ? 'Pode esperar' : 'Sem prioridade'}
-          >
-            <PriorityIcon className="w-5 h-5" />
-          </button>
+          <PriorityButton
+            priority={item.priority ?? 0}
+            onConfirm={(priority) => onPriorityChange(item.id, priority)}
+          />
         )}
 
         {!isCompleted && !dragDisabled && (

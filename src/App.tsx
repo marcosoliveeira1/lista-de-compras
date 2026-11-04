@@ -112,7 +112,7 @@ function ShoppingList() {
     <div className="max-w-md mx-auto flex flex-col h-[100dvh] overflow-hidden bg-slate-50 relative">
       <Header selectedShopListId={selectedShopListId} onShopListChange={handleShopListChange} pendingCount={items.length} isFetching={isFetching} />
 
-      <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-6">
+      <main className="flex-1 overflow-y-auto no-scrollbar [overflow-anchor:none] px-4 pt-6 pb-6">
         {(items.length > 1 || completedItems.length > 1) && (
           <SortBar sort={activeSort} onChange={handleSortChange} showDate={showDateSort} />
         )}

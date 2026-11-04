@@ -22,6 +22,7 @@ export function PriorityButton({ priority, onConfirm }: PriorityButtonProps) {
   const [confirmed, setConfirmed] = useState(false);
   const [cycle, setCycle] = useState(0);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
 
@@ -40,6 +41,8 @@ export function PriorityButton({ priority, onConfirm }: PriorityButtonProps) {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       setConfirmed(true);
+      // Sem foco, o navegador não rola a lista atrás do item quando ele muda de posição
+      buttonRef.current?.blur();
       if (next !== priority) onConfirm(next);
       // Segura o valor até a lista refletir a mudança, evitando piscar o antigo
       timer.current = setTimeout(() => setPending(null), 1000);
@@ -48,6 +51,7 @@ export function PriorityButton({ priority, onConfirm }: PriorityButtonProps) {
 
   return (
     <button
+      ref={buttonRef}
       onClick={handleClick}
       className={cn(
         "relative p-2 rounded-full transition-all active:scale-95 cursor-pointer",

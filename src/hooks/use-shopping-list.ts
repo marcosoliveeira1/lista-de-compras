@@ -5,6 +5,7 @@ import type { ShoppingItem, ShopListResponse } from '../types/index';
 import { useHaptics } from './use-haptics';
 import { toast } from 'sonner';
 import type { ShopListId } from '../config/shoplists';
+import type { Priority } from '../lib/sort';
 
 const getQueryKey = (shoplistId: ShopListId) => ['shopping-list', shoplistId] as const;
 const COMPLETED_KEY = ['completed-list'];
@@ -130,6 +131,36 @@ export const useToggleItem = (shoplistId: ShopListId) => {
       toast.error('Erro ao atualizar item');
       if (context?.previousPending) queryClient.setQueryData(queryKey, context.previousPending);
       if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+};
+
+export const useSetPriority = (shoplistId: ShopListId) => {
+  const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
+  const queryKey = getQueryKey(shoplistId);
+
+  return useMutation({
+    mutationFn: ({ id, priority }: { id: string; priority: Priority }) =>
+      request('PUT', `shoplist/${id}`, { priority }, { shoplistId }),
+    onMutate: async ({ id, priority }) => {
+      trigger('nudge');
+      await queryClient.cancelQueries({ queryKey });
+      const previousList = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) =>
+        old?.map((item) => (item.id === id ? { ...item, priority } : item))
+      );
+
+      return { previousList };
+    },
+    onError: (_err, _variables, context) => {
+      trigger('error');
+      toast.error('Erro ao alterar prioridade');
+      if (context?.previousList) queryClient.setQueryData(queryKey, context.previousList);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });

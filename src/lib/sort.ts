@@ -2,13 +2,15 @@ import type { ShoppingItem } from '../types';
 
 export type SortField = 'order' | 'date' | 'alpha';
 export type SortDirection = 'asc' | 'desc';
+export type Priority = NonNullable<ShoppingItem['priority']>;
 
 export interface SortConfig {
   field: SortField;
   direction: SortDirection;
+  byPriority: boolean;
 }
 
-export const DEFAULT_SORT: SortConfig = { field: 'order', direction: 'asc' };
+export const DEFAULT_SORT: SortConfig = { field: 'order', direction: 'asc', byPriority: false };
 
 const STORAGE_KEY = 'compras_app_sort';
 
@@ -25,13 +27,19 @@ export function hasItemDates(items: ShoppingItem[]) {
   return items.some((item) => getItemDate(item) !== undefined);
 }
 
-export function sortItems(items: ShoppingItem[], { field, direction }: SortConfig): ShoppingItem[] {
+export function sortItems(items: ShoppingItem[], { field, direction, byPriority }: SortConfig): ShoppingItem[] {
   const factor = direction === 'asc' ? 1 : -1;
 
   // Índice original serve de fallback quando o item não tem `order`/data
   return items
     .map((item, index) => ({ item, index }))
     .sort((a, b) => {
+      // Prioridade agrupa antes da ordenação escolhida e ignora asc/desc
+      if (byPriority) {
+        const priorityDiff = (b.item.priority ?? 0) - (a.item.priority ?? 0);
+        if (priorityDiff) return priorityDiff;
+      }
+
       let diff = 0;
       if (field === 'alpha') {
         diff = a.item.label.localeCompare(b.item.label, 'pt-BR', { sensitivity: 'base' });
@@ -53,7 +61,7 @@ export function getStoredSort(): SortConfig {
       ['order', 'date', 'alpha'].includes(stored.field) &&
       ['asc', 'desc'].includes(stored.direction)
     ) {
-      return stored as SortConfig;
+      return { ...stored, byPriority: stored.byPriority === true } as SortConfig;
     }
   } catch {
     // ignora valor inválido
@@ -63,4 +71,10 @@ export function getStoredSort(): SortConfig {
 
 export function storeSort(sort: SortConfig) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sort));
+}
+
+export function nextPriority(priority: Priority = 0): Priority {
+  if (priority === 0) return 1;
+  if (priority === 1) return -1;
+  return 0;
 }

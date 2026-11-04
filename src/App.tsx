@@ -6,7 +6,8 @@ import {
   useAddItem,
   useToggleItem,
   useDeleteItem,
-  useReorderItems
+  useReorderItems,
+  useSetPriority
 } from './hooks/use-shopping-list';
 import { ShoppingBag } from 'lucide-react';
 import { Header } from './components/Header';
@@ -55,6 +56,7 @@ function ShoppingList() {
   const toggleItem = useToggleItem(selectedShopListId);
   const deleteItem = useDeleteItem(selectedShopListId);
   const reorderItems = useReorderItems(selectedShopListId);
+  const setPriority = useSetPriority(selectedShopListId);
 
   const handleShopListChange = (id: ShopListId) => {
     storeShopListId(id);
@@ -129,6 +131,7 @@ function ShoppingList() {
                   dragDisabled={!canDrag}
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
+                  onPriorityChange={(id, priority) => setPriority.mutate({ id, priority })}
                 />
               ))}
             </div>

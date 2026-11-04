@@ -13,6 +13,8 @@ import { Header } from './components/Header';
 import { ItemCard } from './components/ItemCard';
 import { AddItemForm } from './components/AddItemForm';
 import { SkeletonList } from './components/SkeletonList';
+import { SortBar } from './components/SortBar';
+import { getStoredSort, hasItemDates, sortItems, storeSort, type SortConfig } from './lib/sort';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHaptics } from './hooks/use-haptics';
 import { getStoredShopListId, storeShopListId, PRODUCTS_SHOP_LIST_ID, type ShopListId } from './config/shoplists';
@@ -39,6 +41,15 @@ function ShoppingList() {
   const { trigger } = useHaptics();
   const { data: items = [], isLoading, isError, isFetching } = useShoppingList(selectedShopListId);
   const { data: completedItems = [] } = useCompletedItems();
+  const [sort, setSort] = useState<SortConfig>(getStoredSort);
+
+  const showDateSort = hasItemDates(items) || hasItemDates(completedItems);
+  const activeSort: SortConfig = sort.field === 'date' && !showDateSort ? { ...sort, field: 'order' } : sort;
+  // Arrastar só faz sentido na ordem manual crescente
+  const canDrag = activeSort.field === 'order' && activeSort.direction === 'asc';
+
+  const sortedItems = sortItems(items, activeSort);
+  const sortedCompleted = sortItems(completedItems, activeSort);
 
   const addItem = useAddItem(selectedShopListId);
   const toggleItem = useToggleItem(selectedShopListId);
@@ -48,6 +59,12 @@ function ShoppingList() {
   const handleShopListChange = (id: ShopListId) => {
     storeShopListId(id);
     setSelectedShopListId(id);
+  };
+
+  const handleSortChange = (newSort: SortConfig) => {
+    trigger('nudge');
+    storeSort(newSort);
+    setSort(newSort);
   };
 
   const sensors = useSensors(
@@ -63,10 +80,10 @@ function ShoppingList() {
 
     if (over && active.id !== over.id) {
       trigger('nudge');
-      const oldIndex = items.findIndex((i) => i.id === active.id);
-      const newIndex = items.findIndex((i) => i.id === over.id);
+      const oldIndex = sortedItems.findIndex((i) => i.id === active.id);
+      const newIndex = sortedItems.findIndex((i) => i.id === over.id);
 
-      const newList = arrayMove(items, oldIndex, newIndex);
+      const newList = arrayMove(sortedItems, oldIndex, newIndex).map((item, index) => ({ ...item, order: index }));
 
       queryClient.setQueryData(['shopping-list', selectedShopListId], newList);
 
@@ -94,17 +111,22 @@ function ShoppingList() {
       <Header selectedShopListId={selectedShopListId} onShopListChange={handleShopListChange} pendingCount={items.length} isFetching={isFetching} />
 
       <main className="flex-1 overflow-y-auto no-scrollbar px-4 pt-6 pb-6">
+        {(items.length > 1 || completedItems.length > 1) && (
+          <SortBar sort={activeSort} onChange={handleSortChange} showDate={showDateSort} />
+        )}
+
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
         >
-          <SortableContext items={items} strategy={verticalListSortingStrategy}>
+          <SortableContext items={sortedItems} strategy={verticalListSortingStrategy}>
             <div className="space-y-3">
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}
+                  dragDisabled={!canDrag}
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
                 />
@@ -129,7 +151,7 @@ function ShoppingList() {
               </span>
             </h2>
             <div className="space-y-3">
-              {completedItems.map((item) => (
+              {sortedCompleted.map((item) => (
                 <ItemCard
                   key={item.id}
                   item={item}

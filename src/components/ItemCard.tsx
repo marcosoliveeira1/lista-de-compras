@@ -8,11 +8,12 @@ import { CSS } from '@dnd-kit/utilities';
 interface ItemCardProps {
   item: ShoppingItem;
   isCompleted?: boolean;
+  dragDisabled?: boolean;
   onToggle: (item: ShoppingItem) => void;
   onDelete: (id: string) => void;
 }
 
-export function ItemCard({ item, isCompleted, onToggle, onDelete }: ItemCardProps) {
+export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete }: ItemCardProps) {
   const {
     attributes,
     listeners,
@@ -22,7 +23,7 @@ export function ItemCard({ item, isCompleted, onToggle, onDelete }: ItemCardProp
     isDragging
   } = useSortable({
     id: item.id,
-    disabled: isCompleted
+    disabled: isCompleted || dragDisabled
   });
 
   const style = {
@@ -69,7 +70,7 @@ export function ItemCard({ item, isCompleted, onToggle, onDelete }: ItemCardProp
 
 
       <div className="flex items-center gap-1">
-        {!isCompleted && (
+        {!isCompleted && !dragDisabled && (
           <button
             {...attributes}
             {...listeners}

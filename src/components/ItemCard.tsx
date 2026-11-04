@@ -84,8 +84,8 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
             className={cn(
               "p-2 rounded-full transition-all active:scale-95 cursor-pointer",
               priority === 1 && "text-orange-500 bg-orange-50",
-              priority === -1 && "text-slate-400 bg-slate-100",
-              priority === 0 && "text-slate-200 hover:text-slate-400"
+              priority === -1 && "text-sky-600 bg-sky-50",
+              priority === 0 && "text-slate-300 hover:text-slate-400"
             )}
             aria-label={priority === 1 ? 'Prioritário' : priority === -1 ? 'Pode esperar' : 'Sem prioridade'}
           >

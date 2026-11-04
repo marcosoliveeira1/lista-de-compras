@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from 'react';
-import { RefreshCw, ShoppingBag, ShoppingBasket, ChevronDown } from 'lucide-react';
+import { RefreshCw, ShoppingBag, ShoppingBasket, ChevronDown, RotateCw } from 'lucide-react';
 import { SHOP_LISTS, type ShopListId } from '../config/shoplists';
 import { cn } from '../lib/utils';
 
@@ -15,9 +15,25 @@ interface HeaderProps {
   isFetching: boolean;
 }
 
+// Remove service worker e caches do PWA pra baixar o código mais recente do servidor
+async function forceAppUpdate() {
+  try {
+    const registrations = (await navigator.serviceWorker?.getRegistrations()) ?? [];
+    await Promise.all(registrations.map((r) => r.unregister()));
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    }
+  } finally {
+    window.location.reload();
+  }
+}
+
 export function Header({ selectedShopListId, onShopListChange, pendingCount, isFetching }: HeaderProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<'lists' | 'app' | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isOpen = openMenu === 'lists';
 
   const selected = SHOP_LISTS.find(s => s.id === selectedShopListId) ?? SHOP_LISTS[0];
   const Icon = iconMap[selected.icon];
@@ -25,24 +41,46 @@ export function Header({ selectedShopListId, onShopListChange, pendingCount, isF
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
+        setOpenMenu(null);
       }
     }
-    if (isOpen) {
+    if (openMenu) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [isOpen]);
+  }, [openMenu]);
 
   return (
     <header className="sticky top-0 z-10 backdrop-blur-md bg-slate-50/80 px-6 py-5 border-b border-slate-200/50 flex justify-between items-center">
-      <div className="flex items-center gap-3">
-        <div className="bg-blue-100 p-2 rounded-xl">
-          <Icon className="w-6 h-6 text-blue-600" />
-        </div>
-        <div ref={dropdownRef} className="relative">
+      <div ref={dropdownRef} className="flex items-center gap-3">
+        <div className="relative">
           <button
-            onClick={() => setIsOpen(prev => !prev)}
+            onClick={() => setOpenMenu(prev => prev === 'app' ? null : 'app')}
+            className="bg-blue-100 p-2 rounded-xl cursor-pointer active:scale-95 transition-transform"
+            aria-label="Opções"
+          >
+            <Icon className="w-6 h-6 text-blue-600" />
+          </button>
+
+          {openMenu === 'app' && (
+            <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-50 animate-in fade-in slide-in-from-top-1">
+              <button
+                onClick={() => {
+                  setIsUpdating(true);
+                  forceAppUpdate();
+                }}
+                disabled={isUpdating}
+                className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-60"
+              >
+                <RotateCw className={cn("w-4 h-4 text-slate-500", isUpdating && "animate-spin")} />
+                {isUpdating ? 'Atualizando...' : 'Atualizar app'}
+              </button>
+            </div>
+          )}
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setOpenMenu(prev => prev === 'lists' ? null : 'lists')}
             className="flex items-center gap-1.5 group cursor-pointer"
           >
             <h1 className="text-xl font-bold text-slate-900 leading-none tracking-tight">
@@ -66,7 +104,7 @@ export function Header({ selectedShopListId, onShopListChange, pendingCount, isF
                   key={shopList.id}
                   onClick={() => {
                     onShopListChange(shopList.id);
-                    setIsOpen(false);
+                    setOpenMenu(null);
                   }}
                   className={cn(
                     "w-full text-left px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer",

@@ -54,16 +54,17 @@ export const useAddItem = (shoplistId: ShopListId) => {
   const queryKey = getQueryKey(shoplistId);
 
   return useMutation({
-    mutationFn: ({ label, maxValue }: { label: string; maxValue?: number }) => {
+    mutationFn: ({ label, maxValue, condition }: { label: string; maxValue?: number; condition?: string }) => {
       const newItem: ShoppingItem = {
         id: uuidv4(),
         label,
         checked: false,
         ...(maxValue !== undefined ? { maxValue } : {}),
+        ...(condition ? { condition } : {}),
       };
       return request('POST', 'shoplist', newItem, { shoplistId });
     },
-    onMutate: async ({ label, maxValue }) => {
+    onMutate: async ({ label, maxValue, condition }) => {
       trigger('success');
       await queryClient.cancelQueries({ queryKey });
       const previousList = queryClient.getQueryData<ShoppingItem[]>(queryKey);
@@ -74,6 +75,7 @@ export const useAddItem = (shoplistId: ShopListId) => {
           label,
           checked: false,
           ...(maxValue !== undefined ? { maxValue } : {}),
+          ...(condition ? { condition } : {}),
         };
         return old ? [item, ...old] : [item];
       });
@@ -161,6 +163,44 @@ export const useSetPriority = (shoplistId: ShopListId) => {
       trigger('error');
       toast.error('Erro ao alterar prioridade');
       if (context?.previousList) queryClient.setQueryData(queryKey, context.previousList);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+};
+
+// Itens otimistas usam uuid; os reais têm o Id numérico do NocoDB
+export const isOptimisticItem = (item: ShoppingItem) => String(item.id).includes('-');
+
+export const useUpdateCondition = (shoplistId: ShopListId) => {
+  const queryClient = useQueryClient();
+  const { trigger } = useHaptics();
+  const queryKey = getQueryKey(shoplistId);
+
+  const applyCondition = (list: ShoppingItem[] | undefined, id: string, condition?: string) =>
+    list?.map((item) => (item.id === id ? { ...item, condition } : item));
+
+  return useMutation({
+    mutationFn: ({ id, condition }: { id: string; condition?: string }) =>
+      request('PUT', `shoplist/${id}`, { condition: condition ?? null }, { shoplistId }),
+    onMutate: async ({ id, condition }) => {
+      trigger('success');
+      await queryClient.cancelQueries({ queryKey });
+      await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
+      const previousPending = queryClient.getQueryData<ShoppingItem[]>(queryKey);
+      const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY);
+
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => applyCondition(old, id, condition));
+      queryClient.setQueryData<ShoppingItem[]>(COMPLETED_KEY, (old) => applyCondition(old, id, condition));
+
+      return { previousPending, previousCompleted };
+    },
+    onError: (_err, _variables, context) => {
+      trigger('error');
+      toast.error('Erro ao salvar condição');
+      if (context?.previousPending) queryClient.setQueryData(queryKey, context.previousPending);
+      if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });

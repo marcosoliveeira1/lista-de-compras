@@ -7,14 +7,18 @@ import {
   useToggleItem,
   useDeleteItem,
   useReorderItems,
-  useSetPriority
+  useSetPriority,
+  useUpdateCondition,
+  isOptimisticItem
 } from './hooks/use-shopping-list';
 import { ShoppingBag } from 'lucide-react';
 import { Header } from './components/Header';
 import { ItemCard } from './components/ItemCard';
 import { AddItemForm } from './components/AddItemForm';
+import { EditConditionSheet } from './components/EditConditionSheet';
 import { SkeletonList } from './components/SkeletonList';
 import { SortBar } from './components/SortBar';
+import type { ShoppingItem } from './types';
 import { getStoredSort, hasItemDates, sortItems, storeSort, type SortConfig } from './lib/sort';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHaptics } from './hooks/use-haptics';
@@ -43,6 +47,8 @@ function ShoppingList() {
   const { data: items = [], isLoading, isError, isFetching } = useShoppingList(selectedShopListId);
   const { data: completedItems = [] } = useCompletedItems();
   const [sort, setSort] = useState<SortConfig>(getStoredSort);
+  const [editingConditionItem, setEditingConditionItem] = useState<ShoppingItem | null>(null);
+  const isProductsList = selectedShopListId === PRODUCTS_SHOP_LIST_ID;
 
   const showDateSort = hasItemDates(items) || hasItemDates(completedItems);
   const activeSort: SortConfig = sort.field === 'date' && !showDateSort ? { ...sort, field: 'order' } : sort;
@@ -57,6 +63,11 @@ function ShoppingList() {
   const deleteItem = useDeleteItem(selectedShopListId);
   const reorderItems = useReorderItems(selectedShopListId);
   const setPriority = useSetPriority(selectedShopListId);
+  const updateCondition = useUpdateCondition(selectedShopListId);
+
+  // Item otimista ainda não tem o Id do NocoDB: editar mandaria PUT para id inexistente
+  const getEditConditionHandler = (item: ShoppingItem) =>
+    isProductsList && !isOptimisticItem(item) ? setEditingConditionItem : undefined;
 
   const handleShopListChange = (id: ShopListId) => {
     storeShopListId(id);
@@ -132,6 +143,8 @@ function ShoppingList() {
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
                   onPriorityChange={(id, priority) => setPriority.mutate({ id, priority })}
+                  showCondition={isProductsList}
+                  onEditCondition={getEditConditionHandler(item)}
                 />
               ))}
             </div>
@@ -161,6 +174,8 @@ function ShoppingList() {
                   isCompleted
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
+                  showCondition={isProductsList}
+                  onEditCondition={getEditConditionHandler(item)}
                 />
               ))}
             </div>
@@ -169,9 +184,20 @@ function ShoppingList() {
       </main>
 
       <AddItemForm
-        onAdd={(label, maxValue) => addItem.mutate({ label, maxValue })}
-        showMaxValue={selectedShopListId === PRODUCTS_SHOP_LIST_ID}
+        onAdd={(label, maxValue, condition) => addItem.mutate({ label, maxValue, condition })}
+        isProductsList={isProductsList}
       />
+
+      {editingConditionItem && (
+        <EditConditionSheet
+          item={editingConditionItem}
+          onCancel={() => setEditingConditionItem(null)}
+          onSave={(condition) => {
+            updateCondition.mutate({ id: editingConditionItem.id, condition });
+            setEditingConditionItem(null);
+          }}
+        />
+      )}
     </div>
 
 

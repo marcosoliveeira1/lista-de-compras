@@ -62,9 +62,18 @@ Ao invés de criar um webhook para cada URL (ex: `/shoplist` e `/shoplist/123`),
 {
   "id": "123e4567-e89b-12d3-a456-426614174000",
   "label": "Leite",
-  "checked": false
+  "checked": false,
+  "order": 0,
+  "priority": 0,
+  "createdAt": "2026-11-09T12:00:00.000Z",
+  "maxValue": 499.9,
+  "condition": "Só tipo forno (oven), 11L ou mais"
 }
 ```
+
+- `priority`: `1` prioritário, `0` neutro, `-1` pode esperar.
+- `maxValue` e `condition` são opcionais e só usados na lista **Produtos**.
+- `condition` é texto livre que restringe o item no alerta de promoções (coluna NocoDB `Condicao`). No `PUT`, `""`/`null` remove a condição e a chave ausente não altera nada.
 
 ### 4. Endpoints Esperados
 

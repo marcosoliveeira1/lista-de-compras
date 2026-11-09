@@ -1,6 +1,6 @@
 import { Checkbox } from './ui/checkbox';
 import type { ShoppingItem } from '../types';
-import { Trash2, GripVertical } from 'lucide-react';
+import { Trash2, GripVertical, Pencil } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -14,9 +14,12 @@ interface ItemCardProps {
   onToggle: (item: ShoppingItem) => void;
   onDelete: (id: string) => void;
   onPriorityChange?: (id: string, priority: Priority) => void;
+  // Condição só aparece na lista Produtos; sem a flag não renderiza mesmo havendo dado
+  showCondition?: boolean;
+  onEditCondition?: (item: ShoppingItem) => void;
 }
 
-export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange }: ItemCardProps) {
+export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange, showCondition, onEditCondition }: ItemCardProps) {
   const {
     attributes,
     listeners,
@@ -44,7 +47,7 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
         isDragging && "z-50 shadow-xl border-blue-200 scale-105 opacity-90 rotate-1"
       )}
     >
-      <div className="flex items-center gap-4 flex-1">
+      <div className="flex items-center gap-4 flex-1 min-w-0">
         <Checkbox
           checked={item.checked}
           onCheckedChange={(checked) => onToggle({ ...item, checked: checked as boolean })}
@@ -67,6 +70,31 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
             >
               máx {item.maxValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
+          )}
+          {showCondition && (
+            item.condition ? (
+              <button
+                type="button"
+                onClick={() => onEditCondition?.(item)}
+                disabled={!onEditCondition}
+                className={cn(
+                  "text-left text-sm line-clamp-2 whitespace-pre-line break-words transition-all duration-300",
+                  item.checked ? "text-slate-400" : "text-slate-500"
+                )}
+                aria-label="Editar condição"
+              >
+                {item.condition}
+              </button>
+            ) : onEditCondition && (
+              <button
+                type="button"
+                onClick={() => onEditCondition(item)}
+                className="self-start flex items-center gap-1 text-xs text-slate-300 hover:text-slate-500 transition-colors"
+              >
+                <Pencil className="w-3 h-3" />
+                condição
+              </button>
+            )
           )}
         </div>
       </div>

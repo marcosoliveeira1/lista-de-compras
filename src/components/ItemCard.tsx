@@ -14,13 +14,14 @@ interface ItemCardProps {
   onToggle: (item: ShoppingItem) => void;
   onDelete: (id: string) => void;
   onPriorityChange?: (id: string, priority: Priority) => void;
+  onPriorityPendingChange?: (id: string, pending: boolean) => void;
   // Condição só aparece na lista Produtos; sem a flag não renderiza mesmo havendo dado
   showCondition?: boolean;
   // Sem handler o card não é editável (lista Mercado ou item otimista)
   onEdit?: (item: ShoppingItem) => void;
 }
 
-export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange, showCondition, onEdit }: ItemCardProps) {
+export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange, onPriorityPendingChange, showCondition, onEdit }: ItemCardProps) {
   const {
     attributes,
     listeners,
@@ -104,6 +105,7 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
           <PriorityButton
             priority={item.priority ?? 0}
             onConfirm={(priority) => onPriorityChange(item.id, priority)}
+            onPendingChange={(pending) => onPriorityPendingChange?.(item.id, pending)}
           />
         )}
 

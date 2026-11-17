@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AuthGuard } from './components/AuthGuard';
 import {
   useShoppingList,
@@ -19,7 +19,7 @@ import { EditItemSheet } from './components/EditItemSheet';
 import { SkeletonList } from './components/SkeletonList';
 import { SortBar } from './components/SortBar';
 import type { ShoppingItem } from './types';
-import { getStoredSort, hasItemDates, sortItems, storeSort, type SortConfig } from './lib/sort';
+import { getStoredSort, hasItemDates, sortItems, storeSort, type Priority, type SortConfig } from './lib/sort';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHaptics } from './hooks/use-haptics';
 import { getStoredShopListId, storeShopListId, PRODUCTS_SHOP_LIST_ID, type ShopListId } from './config/shoplists';
@@ -40,6 +40,12 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 
+// Itens novos (fora do snapshot) vão para o topo, como no add otimista
+function applyFrozenOrder(items: ShoppingItem[], order: string[]) {
+  const position = new Map(order.map((id, index) => [id, index]));
+  return [...items].sort((a, b) => (position.get(a.id) ?? -1) - (position.get(b.id) ?? -1));
+}
+
 function ShoppingList() {
   const [selectedShopListId, setSelectedShopListId] = useState<ShopListId>(getStoredShopListId);
   const queryClient = useQueryClient();
@@ -55,7 +61,18 @@ function ShoppingList() {
   // Arrastar só faz sentido na ordem manual crescente
   const canDrag = activeSort.field === 'order' && activeSort.direction === 'asc';
 
-  const sortedItems = sortItems(items, activeSort);
+  // Enquanto alguma prioridade aguarda os 3s, a lista não muda de ordem nem recebe as trocas já confirmadas
+  const [pendingPriorityIds, setPendingPriorityIds] = useState<ReadonlySet<string>>(new Set());
+  const queuedPriorities = useRef(new Map<string, Priority>());
+  const [queueVersion, setQueueVersion] = useState(0);
+  const [frozenOrder, setFrozenOrder] = useState<string[] | null>(null);
+  const isPriorityPending = pendingPriorityIds.size > 0;
+
+  const liveSortedItems = sortItems(items, activeSort);
+  if (isPriorityPending && !frozenOrder) setFrozenOrder(liveSortedItems.map((item) => item.id));
+  if (!isPriorityPending && frozenOrder) setFrozenOrder(null);
+
+  const sortedItems = frozenOrder ? applyFrozenOrder(liveSortedItems, frozenOrder) : liveSortedItems;
   const sortedCompleted = sortItems(completedItems, activeSort);
 
   const addItem = useAddItem(selectedShopListId);
@@ -65,11 +82,38 @@ function ShoppingList() {
   const setPriority = useSetPriority(selectedShopListId);
   const updateItem = useUpdateItem(selectedShopListId);
 
+  const flushPriorities = () => {
+    queuedPriorities.current.forEach((priority, id) => setPriority.mutate({ id, priority }));
+    queuedPriorities.current.clear();
+  };
+
+  // O confirm vem de um setTimeout com closure antiga: quem decide enviar é o effect, com o estado atual
+  useEffect(() => {
+    if (!isPriorityPending) flushPriorities();
+  }, [isPriorityPending, queueVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePriorityChange = (id: string, priority: Priority) => {
+    queuedPriorities.current.set(id, priority);
+    setQueueVersion((v) => v + 1);
+  };
+
+  const handlePriorityPendingChange = (id: string, pending: boolean) => {
+    setPendingPriorityIds((prev) => {
+      if (prev.has(id) === pending) return prev;
+      const next = new Set(prev);
+      if (pending) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
   // Item otimista ainda não tem o Id do NocoDB: editar mandaria PUT para id inexistente
   const getEditHandler = (item: ShoppingItem) =>
     isProductsList && !isOptimisticItem(item) ? setEditingItem : undefined;
 
   const handleShopListChange = (id: ShopListId) => {
+    // A fila usa o hook da lista atual; envia antes de trocar
+    flushPriorities();
     storeShopListId(id);
     setSelectedShopListId(id);
   };
@@ -142,7 +186,8 @@ function ShoppingList() {
                   dragDisabled={!canDrag}
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
-                  onPriorityChange={(id, priority) => setPriority.mutate({ id, priority })}
+                  onPriorityChange={handlePriorityChange}
+                  onPriorityPendingChange={handlePriorityPendingChange}
                   showCondition={isProductsList}
                   onEdit={getEditHandler(item)}
                 />

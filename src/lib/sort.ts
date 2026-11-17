@@ -73,8 +73,7 @@ export function storeSort(sort: SortConfig) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(sort));
 }
 
-export function nextPriority(priority: Priority = 0): Priority {
-  if (priority === 0) return 1;
-  if (priority === 1) return -1;
-  return 0;
+// Clique simples alterna prioritário ↔ neutro; "pode esperar" só pelo menu (segurar)
+export function togglePriority(priority: Priority = 0): Priority {
+  return priority === 1 ? 0 : 1;
 }

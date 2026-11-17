@@ -8,14 +8,14 @@ import {
   useDeleteItem,
   useReorderItems,
   useSetPriority,
-  useUpdateCondition,
+  useUpdateItem,
   isOptimisticItem
 } from './hooks/use-shopping-list';
 import { ShoppingBag } from 'lucide-react';
 import { Header } from './components/Header';
 import { ItemCard } from './components/ItemCard';
 import { AddItemForm } from './components/AddItemForm';
-import { EditConditionSheet } from './components/EditConditionSheet';
+import { EditItemSheet } from './components/EditItemSheet';
 import { SkeletonList } from './components/SkeletonList';
 import { SortBar } from './components/SortBar';
 import type { ShoppingItem } from './types';
@@ -47,7 +47,7 @@ function ShoppingList() {
   const { data: items = [], isLoading, isError, isFetching } = useShoppingList(selectedShopListId);
   const { data: completedItems = [] } = useCompletedItems();
   const [sort, setSort] = useState<SortConfig>(getStoredSort);
-  const [editingConditionItem, setEditingConditionItem] = useState<ShoppingItem | null>(null);
+  const [editingItem, setEditingItem] = useState<ShoppingItem | null>(null);
   const isProductsList = selectedShopListId === PRODUCTS_SHOP_LIST_ID;
 
   const showDateSort = hasItemDates(items) || hasItemDates(completedItems);
@@ -63,11 +63,11 @@ function ShoppingList() {
   const deleteItem = useDeleteItem(selectedShopListId);
   const reorderItems = useReorderItems(selectedShopListId);
   const setPriority = useSetPriority(selectedShopListId);
-  const updateCondition = useUpdateCondition(selectedShopListId);
+  const updateItem = useUpdateItem(selectedShopListId);
 
   // Item otimista ainda não tem o Id do NocoDB: editar mandaria PUT para id inexistente
-  const getEditConditionHandler = (item: ShoppingItem) =>
-    isProductsList && !isOptimisticItem(item) ? setEditingConditionItem : undefined;
+  const getEditHandler = (item: ShoppingItem) =>
+    isProductsList && !isOptimisticItem(item) ? setEditingItem : undefined;
 
   const handleShopListChange = (id: ShopListId) => {
     storeShopListId(id);
@@ -144,7 +144,7 @@ function ShoppingList() {
                   onDelete={deleteItem.mutate}
                   onPriorityChange={(id, priority) => setPriority.mutate({ id, priority })}
                   showCondition={isProductsList}
-                  onEditCondition={getEditConditionHandler(item)}
+                  onEdit={getEditHandler(item)}
                 />
               ))}
             </div>
@@ -175,7 +175,7 @@ function ShoppingList() {
                   onToggle={toggleItem.mutate}
                   onDelete={deleteItem.mutate}
                   showCondition={isProductsList}
-                  onEditCondition={getEditConditionHandler(item)}
+                  onEdit={getEditHandler(item)}
                 />
               ))}
             </div>
@@ -188,13 +188,13 @@ function ShoppingList() {
         isProductsList={isProductsList}
       />
 
-      {editingConditionItem && (
-        <EditConditionSheet
-          item={editingConditionItem}
-          onCancel={() => setEditingConditionItem(null)}
-          onSave={(condition) => {
-            updateCondition.mutate({ id: editingConditionItem.id, condition });
-            setEditingConditionItem(null);
+      {editingItem && (
+        <EditItemSheet
+          item={editingItem}
+          onCancel={() => setEditingItem(null)}
+          onSave={(edits) => {
+            updateItem.mutate({ id: editingItem.id, ...edits });
+            setEditingItem(null);
           }}
         />
       )}

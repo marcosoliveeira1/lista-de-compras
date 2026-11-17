@@ -173,32 +173,40 @@ export const useSetPriority = (shoplistId: ShopListId) => {
 // Itens otimistas usam uuid; os reais têm o Id numérico do NocoDB
 export const isOptimisticItem = (item: ShoppingItem) => String(item.id).includes('-');
 
-export const useUpdateCondition = (shoplistId: ShopListId) => {
+type ItemEdits = { id: string; label: string; maxValue?: number; condition?: string };
+
+export const useUpdateItem = (shoplistId: ShopListId) => {
   const queryClient = useQueryClient();
   const { trigger } = useHaptics();
   const queryKey = getQueryKey(shoplistId);
 
-  const applyCondition = (list: ShoppingItem[] | undefined, id: string, condition?: string) =>
-    list?.map((item) => (item.id === id ? { ...item, condition } : item));
+  const applyEdits = (list: ShoppingItem[] | undefined, { id, label, maxValue, condition }: ItemEdits) =>
+    list?.map((item) => (item.id === id ? { ...item, label, maxValue, condition } : item));
 
   return useMutation({
-    mutationFn: ({ id, condition }: { id: string; condition?: string }) =>
-      request('PUT', `shoplist/${id}`, { condition: condition ?? null }, { shoplistId }),
-    onMutate: async ({ id, condition }) => {
+    // null limpa a coluna no NocoDB; chave ausente não alteraria nada
+    mutationFn: ({ id, label, maxValue, condition }: ItemEdits) =>
+      request(
+        'PUT',
+        `shoplist/${id}`,
+        { label, maxValue: maxValue ?? null, condition: condition ?? null },
+        { shoplistId }
+      ),
+    onMutate: async (edits) => {
       trigger('success');
       await queryClient.cancelQueries({ queryKey });
       await queryClient.cancelQueries({ queryKey: COMPLETED_KEY });
       const previousPending = queryClient.getQueryData<ShoppingItem[]>(queryKey);
       const previousCompleted = queryClient.getQueryData<ShoppingItem[]>(COMPLETED_KEY);
 
-      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => applyCondition(old, id, condition));
-      queryClient.setQueryData<ShoppingItem[]>(COMPLETED_KEY, (old) => applyCondition(old, id, condition));
+      queryClient.setQueryData<ShoppingItem[]>(queryKey, (old) => applyEdits(old, edits));
+      queryClient.setQueryData<ShoppingItem[]>(COMPLETED_KEY, (old) => applyEdits(old, edits));
 
       return { previousPending, previousCompleted };
     },
     onError: (_err, _variables, context) => {
       trigger('error');
-      toast.error('Erro ao salvar condição');
+      toast.error('Erro ao salvar item');
       if (context?.previousPending) queryClient.setQueryData(queryKey, context.previousPending);
       if (context?.previousCompleted) queryClient.setQueryData(COMPLETED_KEY, context.previousCompleted);
     },

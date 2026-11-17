@@ -74,6 +74,7 @@ Ao invés de criar um webhook para cada URL (ex: `/shoplist` e `/shoplist/123`),
 - `priority`: `1` prioritário, `0` neutro, `-1` pode esperar.
 - `maxValue` e `condition` são opcionais e só usados na lista **Produtos**.
 - `condition` é texto livre que restringe o item no alerta de promoções (coluna NocoDB `Condicao`). No `PUT`, `""`/`null` remove a condição e a chave ausente não altera nada.
+- Na lista **Produtos**, tocar no item abre o editor: o `PUT` envia `label`, `maxValue` e `condition` juntos (`null` limpa o valor máximo/condição).
 
 ### 4. Endpoints Esperados
 

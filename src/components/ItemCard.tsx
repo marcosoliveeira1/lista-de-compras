@@ -16,10 +16,11 @@ interface ItemCardProps {
   onPriorityChange?: (id: string, priority: Priority) => void;
   // Condição só aparece na lista Produtos; sem a flag não renderiza mesmo havendo dado
   showCondition?: boolean;
-  onEditCondition?: (item: ShoppingItem) => void;
+  // Sem handler o card não é editável (lista Mercado ou item otimista)
+  onEdit?: (item: ShoppingItem) => void;
 }
 
-export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange, showCondition, onEditCondition }: ItemCardProps) {
+export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, onPriorityChange, showCondition, onEdit }: ItemCardProps) {
   const {
     attributes,
     listeners,
@@ -52,10 +53,16 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
           checked={item.checked}
           onCheckedChange={(checked) => onToggle({ ...item, checked: checked as boolean })}
         />
-        <div className="flex flex-col min-w-0">
+        <button
+          type="button"
+          onClick={() => onEdit?.(item)}
+          disabled={!onEdit}
+          className="flex flex-col min-w-0 text-left disabled:cursor-default"
+          aria-label={onEdit ? `Editar ${item.label}` : undefined}
+        >
           <span
             className={cn(
-              "text-lg font-medium transition-all duration-300 truncate",
+              "text-lg font-medium transition-all duration-300 truncate max-w-full",
               item.checked ? "line-through text-slate-400" : "text-slate-700"
             )}
           >
@@ -73,30 +80,22 @@ export function ItemCard({ item, isCompleted, dragDisabled, onToggle, onDelete, 
           )}
           {showCondition && (
             item.condition ? (
-              <button
-                type="button"
-                onClick={() => onEditCondition?.(item)}
-                disabled={!onEditCondition}
+              <span
                 className={cn(
-                  "text-left text-sm line-clamp-2 whitespace-pre-line break-words transition-all duration-300",
+                  "text-sm line-clamp-2 whitespace-pre-line break-words transition-all duration-300",
                   item.checked ? "text-slate-400" : "text-slate-500"
                 )}
-                aria-label="Editar condição"
               >
                 {item.condition}
-              </button>
-            ) : onEditCondition && (
-              <button
-                type="button"
-                onClick={() => onEditCondition(item)}
-                className="self-start flex items-center gap-1 text-xs text-slate-300 hover:text-slate-500 transition-colors"
-              >
+              </span>
+            ) : onEdit && (
+              <span className="flex items-center gap-1 text-xs text-slate-300">
                 <Pencil className="w-3 h-3" />
-                condição
-              </button>
+                editar
+              </span>
             )
           )}
-        </div>
+        </button>
       </div>
 
 
